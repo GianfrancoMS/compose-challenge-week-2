@@ -16,21 +16,40 @@
 package com.example.androiddevchallenge
 
 import android.os.Bundle
+import android.text.format.DateUtils
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.androiddevchallenge.ui.theme.MyTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.androiddevchallenge.TimerViewModel.Companion.DEFAULT_START_TIME
+import com.example.androiddevchallenge.ui.theme.ChallengeTheme
+import dev.chrisbanes.accompanist.insets.ProvideWindowInsets
+import dev.chrisbanes.accompanist.insets.navigationBarsPadding
+import dev.chrisbanes.accompanist.insets.statusBarsPadding
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            MyTheme {
-                MyApp()
+            ChallengeTheme {
+                ProvideWindowInsets {
+                    ChallengeApp()
+                }
             }
         }
     }
@@ -38,24 +57,39 @@ class MainActivity : AppCompatActivity() {
 
 // Start building your app here!
 @Composable
-fun MyApp() {
-    Surface(color = MaterialTheme.colors.background) {
-        Text(text = "Ready... Set... GO!")
-    }
-}
+fun ChallengeApp() {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .navigationBarsPadding()
+    ) {
+        val viewModel: TimerViewModel = viewModel()
+        val time by viewModel.timeInSeconds.observeAsState(DEFAULT_START_TIME)
+        val progress by viewModel.progress.observeAsState(1f)
 
-@Preview("Light Theme", widthDp = 360, heightDp = 640)
-@Composable
-fun LightPreview() {
-    MyTheme {
-        MyApp()
-    }
-}
+        val animatedProgress = remember { Animatable(progress) }
 
-@Preview("Dark Theme", widthDp = 360, heightDp = 640)
-@Composable
-fun DarkPreview() {
-    MyTheme(darkTheme = true) {
-        MyApp()
+        LaunchedEffect(viewModel) {
+            viewModel.startTimer()
+        }
+
+        LaunchedEffect(time) {
+            animatedProgress.animateTo(
+                targetValue = progress,
+                animationSpec = tween(durationMillis = 1000, easing = LinearEasing)
+            )
+        }
+
+        WaterWave(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            progress = animatedProgress.value
+        )
+        Timer(
+            time = DateUtils.formatElapsedTime(time),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+        )
     }
 }
